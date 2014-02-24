@@ -5,44 +5,20 @@
 
 from twaiter import TWaiter
 import tweepy, sys, twitterparams
-import time
 import logging
-from daemon import runner
-import os
+import logging.handlers
+import signal
 
-class App():
-    # authentication params (supplied via cfn)
+# authentication params (supplied via cfn)
+consumer_key = twitterparams.OAuthConsKey
+consumer_secret = twitterparams.OAuthConsSecret
+access_token = twitterparams.OAuthToken
+access_token_secret = twitterparams.OAuthTokenSecret
 
-    def __init__(self):
-        logger=logging.getLogger('RotatingLogger')
-        self.stdin_path = '/dev/null'
-        self.stdout_path = '/dev/null'
-        self.stderr_path = '/dev/null'
-        self.pidfile_path =  os.path.dirname(os.path.realpath(__file__))+"/tweet-to-S3.pid"
-        logger.info("pidfile_path: {0}".format(self.pidfile_path))
-        self.pidfile_timeout = 5
-
-    def run(self):
-        logger=logging.getLogger('RotatingLogger')
-        consumer_key = twitterparams.OAuthConsKey
-        consumer_secret = twitterparams.OAuthConsSecret
-        access_token = twitterparams.OAuthToken
-        access_token_secret = twitterparams.OAuthTokenSecret
-
-        # OAuth via tweepy
-        auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
-        auth.set_access_token(access_token, access_token_secret)
-        api = tweepy.API(auth)
-
-        waiter = TWaiter(api)
-        stream = tweepy.Stream(auth, waiter)
-
-        try:
-            stream.sample()
-        except Exception, e:
-            logger.error("An error occurred. No tweets collected. {0}".format(e))
-            stream.disconnect()
-
+# OAuth via tweepy
+auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+auth.set_access_token(access_token, access_token_secret)
+api = tweepy.API(auth)
 
 LOG_FILENAME = "logs/output.log"
 logger = logging.getLogger('RotatingLogger')
@@ -50,10 +26,39 @@ logger.setLevel(logging.INFO)
 handler = logging.handlers.RotatingFileHandler(LOG_FILENAME, maxBytes=100000, backupCount=10)
 logger.addHandler(handler)
 
-app = App()
+waiter = TWaiter(api, "tweets")
+stream = tweepy.Stream(auth, waiter)
 
 
-daemon_runner = runner.DaemonRunner(app)
-daemon_runner.daemon_context.files_preserve=[handler.stream]
-daemon_runner.do_action()
+def main(term):
 
+    print "Collecting tweets. Please wait."
+    logger.info("Collecting tweets. Please wait.")
+
+    try:
+        stream.sample()
+    # except (KeyboardInterrupt, SystemExit):
+    #     stream.disconnect()
+    except Exception, e:
+        print "An error occurred. No tweets collected.", e
+        stream.disconnect()
+        waiter.close()
+
+
+def close(signal, frame):
+    stream.disconnect()
+    waiter.close()
+
+if __name__ == '__main__':
+    signal.signal(signal.SIGINT, close)
+    signal.signal(signal.SIGTERM, close)
+
+    main(sys.argv)
+    print "before logging.shutdown"
+    handlers = logger.handlers[:]
+    for handler in handlers:
+        print "closing handler: {0}".format(handler)
+        handler.close()
+        logger.removeHandler(handler)
+
+    print "after logging shutdown"
