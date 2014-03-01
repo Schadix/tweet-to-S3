@@ -7,4 +7,4 @@ then
 fi
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-scp collector.py twaiter.py tweet-to-S3 $1:tweet-to-S3/
+scp collector.py twaiter.py tweet-to-S3 zdaemon.conf $1:tweet-to-S3/

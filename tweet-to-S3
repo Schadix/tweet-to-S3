@@ -14,23 +14,27 @@
 
 TWEET_TO_S3_HOME=/home/ec2-user/tweet-to-S3
 SERVICENAME=tweet-to-S3
+RUN_AS_USER=ec2-user
 
 case "$1" in
     start)
         echo -n "Starting $SERVICENAME services: "
         cd $TWEET_TO_S3_HOME
-        nohup daemon python collector.py &
+        zdaemon --user $RUN_AS_USER -C zdaemon.conf start
         touch /var/lock/subsys/$SERVICENAME
     ;;
     stop)
         echo -n "Shutting down $SERVICENAME services: "
-        killproc $SERVICENAME
+        cd $TWEET_TO_S3_HOME
+        zdaemon --user $RUN_AS_USER -C zdaemon.conf stop
         rm -f /var/lock/subsys/$SERVICENAME
     ;;
     status)
-        status $SERVICENAME
+        cd $TWEET_TO_S3_HOME
+        zdaemon --user $RUN_AS_USER -C zdaemon.conf status
     ;;
     restart)
+        cd $TWEET_TO_S3_HOME
         $0 stop; $0 start
     ;;
     reload)

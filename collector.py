@@ -32,7 +32,7 @@ stream = tweepy.Stream(auth, waiter)
 
 def main(term):
 
-    logger.info("Collecting tweets. Please wait.")
+    logger.info("Starting to collect tweets")
 
     try:
         stream.sample()

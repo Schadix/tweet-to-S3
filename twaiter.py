@@ -12,7 +12,6 @@ import boto.ec2.cloudwatch
 
 class TWaiter(StreamListener):
     # see Tweepy for more info
-    logger = logging.getLogger('RotatingLogger')
 
     s3Conn = None
 
@@ -25,7 +24,7 @@ class TWaiter(StreamListener):
         return filename
 
     def __init__(self, api = None, label = 'default_collection'):
-        print("INIT")
+        self.logger = logging.getLogger('RotatingLogger')
         self.api = api or API()
         self.counter = 0
         self.number_of_tweeets = twitterparams.TOTAL_TWEETS
@@ -45,7 +44,6 @@ class TWaiter(StreamListener):
             self.logger.error("Problem opening output file and connection to s3. Excpetion: {0}".format(e))
 
     def notify_cloudwatch(self,total_seconds=1):
-        self.logger.info("notify_cloudwatch")        
         count_per_second = (self.number_of_tweeets - self.tweet_interval_start_count) / total_seconds
         try:
             self.logger.info("self.number_of_tweeets: {0}, self.tweet_interval_start_count: {1}, total_seconds: {2}, count_per_second: {3}".format(self.number_of_tweeets, self.tweet_interval_start_count, total_seconds, count_per_second))
