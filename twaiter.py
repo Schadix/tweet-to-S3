@@ -5,14 +5,14 @@
 from tweepy import StreamListener
 import json, time, sys, os, datetime, subprocess
 from os import rename, remove
-import twitterparams
+import twitterparams, logging
 import boto
 from boto.s3.key import Key
 import boto.ec2.cloudwatch
 
 class TWaiter(StreamListener):
-
     # see Tweepy for more info
+    logger = logging.getLogger('RotatingLogger')
 
     s3Conn = None
 
@@ -28,7 +28,7 @@ class TWaiter(StreamListener):
         print("INIT")
         self.api = api or API()
         self.counter = 0
-        self.number_of_tweeets = 0
+        self.number_of_tweeets = twitterparams.TOTAL_TWEETS
         self.interval = twitterparams.CW_INTERVAL
         self.counter_max_size = twitterparams.COUNTER_MAX_SIZE
         self.CW_NAMESPACE = twitterparams.CW_NAMESPACE
@@ -42,13 +42,13 @@ class TWaiter(StreamListener):
             self.tweet_read_starttime = datetime.datetime.now()
             self.tweet_interval_start_count = self.number_of_tweeets
         except Exception, e:
-            print("Problem opening output file and connection to s3. Excpetion: {0}".format(e))
+            self.logger.error("Problem opening output file and connection to s3. Excpetion: {0}".format(e))
 
     def notify_cloudwatch(self,total_seconds=1):
-        print("notify_cloudwatch")        
+        self.logger.info("notify_cloudwatch")        
         count_per_second = (self.number_of_tweeets - self.tweet_interval_start_count) / total_seconds
         try:
-            print("self.number_of_tweeets: {0}, self.tweet_interval_start_count: {1}, total_seconds: {2}, count_per_second: {3}".format(self.number_of_tweeets, self.tweet_interval_start_count, total_seconds, count_per_second))
+            self.logger.info("self.number_of_tweeets: {0}, self.tweet_interval_start_count: {1}, total_seconds: {2}, count_per_second: {3}".format(self.number_of_tweeets, self.tweet_interval_start_count, total_seconds, count_per_second))
             self.cwConn.put_metric_data(namespace=self.CW_NAMESPACE,name="tweetsPerSecond",value=count_per_second
                 , timestamp=datetime.datetime.now(), unit="Count/Second")
             self.cwConn.put_metric_data(namespace=self.CW_NAMESPACE,name="tweetsTotal",value=self.number_of_tweeets
@@ -56,10 +56,10 @@ class TWaiter(StreamListener):
             self.tweet_read_starttime=datetime.datetime.now()
             self.tweet_interval_start_count = self.number_of_tweeets
         except Exception, e:
-            print("notify_cloudwatch. Exception {0}".format(e))
+            self.logger.error("notify_cloudwatch. Exception {0}".format(e))
 
     def file_to_s3(self):
-        print("file_to_s3")
+        self.logger.info("file_to_s3")
         # TODO: should go into subprocess
         # 1. create new file (leave old file open for writes)
         # 2. switch to new file
@@ -73,10 +73,10 @@ class TWaiter(StreamListener):
             k = Key(self.bucket)
             k.key = old_temp_file.name+'.zip'
             k.set_contents_from_filename(old_temp_file.name+'.zip')
-            print('{0}.zip copied to S3 bucket'.format(old_temp_file.name))
+            self.logger.info('{0}.zip copied to S3 bucket'.format(old_temp_file.name))
             remove(old_temp_file.name+'.zip')
         except Exception, e:
-            print("file_to_s3. Exception {0}".format(e))
+            self.logger.error("file_to_s3. Exception {0}".format(e))
 
     def on_data(self, data):
         # The presence of 'in_reply_to_status' indicates a "normal" tweet.
@@ -92,6 +92,7 @@ class TWaiter(StreamListener):
     def on_status(self, status):
         # Get only the text of the tweet and its ID.
         self.output.write(status)
+        # print (status)
 
         self.counter += 1
         self.number_of_tweeets += 1
@@ -116,11 +117,11 @@ class TWaiter(StreamListener):
         return
 
     def on_error(self, status_code):
-        sys.stderr.write('Error: ' + str(status_code) + "\n")
+        self.logger.error('Error: ' + str(status_code) + "\n")
         return False
     
     def close(self):
-        print "Twaiter - close"
+        self.logger.info("Twaiter - close")
         total_seconds = (datetime.datetime.now() - self.tweet_read_starttime).total_seconds()
         self.notify_cloudwatch(total_seconds)
         self.file_to_s3()

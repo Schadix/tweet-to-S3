@@ -32,7 +32,6 @@ stream = tweepy.Stream(auth, waiter)
 
 def main(term):
 
-    print "Collecting tweets. Please wait."
     logger.info("Collecting tweets. Please wait.")
 
     try:
@@ -40,7 +39,7 @@ def main(term):
     # except (KeyboardInterrupt, SystemExit):
     #     stream.disconnect()
     except Exception, e:
-        print "An error occurred. No tweets collected.", e
+        logger.error("An error occurred. No tweets collected. {0}".format(e))
         stream.disconnect()
         waiter.close()
 
@@ -54,11 +53,9 @@ if __name__ == '__main__':
     signal.signal(signal.SIGTERM, close)
 
     main(sys.argv)
-    print "before logging.shutdown"
     handlers = logger.handlers[:]
     for handler in handlers:
-        print "closing handler: {0}".format(handler)
+        logger.info("closing handler: {0}".format(handler))
         handler.close()
         logger.removeHandler(handler)
 
-    print "after logging shutdown"

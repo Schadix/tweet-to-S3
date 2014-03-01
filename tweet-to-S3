@@ -1,53 +1,43 @@
-#! /bin/bash
-# Copyright (c) 1996-2012 My Company.
-# All rights reserved.
+#!/bin/bash
 #
-# Author: Bob Bobson, 2012
+# Author: schadix (copied sceleton from jonesy@cs.princeton.edu)
 #
-#
-# chkconfig: 2345 80 50
-# description:  read tweets and store them in S3
-#
-### BEGIN INIT INFO
-# Provides: tweet-to-S3
-# Required-Start:
-# Should-Start:
-# Required-Stop:
-# Should-Stop:
-# Default-Start:  3 5
-# Default-Stop:   0 1 2 6
-# Short-Description: Test daemon process
-# Description:    Runs up the test daemon process
-### END INIT INFO
+# chkconfig: 2345 13 100
+# description: tweet-to-S3
+# NEW VERSION FROM (http://www.linux.com/learn/tutorials/442412-managing-linux-daemons-with-init-scripts)
+
+# Source function library.
+. /etc/init.d/functions
 
 # Activate the python virtual environment
-    . /home/ec2-user/python27/bin/activate
+. /home/ec2-user/python27/bin/activate
 
 TWEET_TO_S3_HOME=/home/ec2-user/tweet-to-S3
+SERVICENAME=tweet-to-S3
 
 case "$1" in
-  start)
-    echo "Starting server"
-    # Start the daemon
-    cd $TWEET_TO_S3_HOME
-    python collector.py start
+    start)
+        echo -n "Starting $SERVICENAME services: "
+        cd $TWEET_TO_S3_HOME
+        nohup daemon python collector.py &
+        touch /var/lock/subsys/$SERVICENAME
     ;;
-  stop)
-    echo "Stopping server"
-    # Stop the daemon
-    cd $TWEET_TO_S3_HOME
-    python collector.py stop
+    stop)
+        echo -n "Shutting down $SERVICENAME services: "
+        killproc $SERVICENAME
+        rm -f /var/lock/subsys/$SERVICENAME
     ;;
-  restart)
-    echo "Restarting server"
-    cd $TWEET_TO_S3_HOME
-    python collector.py restart
+    status)
+        status $SERVICENAME
     ;;
-  *)
-    # Refuse to do other stuff
-    echo "Usage: /etc/init.d/tweet-to-S3.sh {start|stop|restart}"
-    exit 1
+    restart)
+        $0 stop; $0 start
+    ;;
+    reload)
+        $0 stop; $0 start
+    ;;
+    *)
+        echo "Usage: $SERVICENAME {start|stop|status|reload|restart[|probe]"
+        exit 1
     ;;
 esac
-
-exit 0
