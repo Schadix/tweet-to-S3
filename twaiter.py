@@ -9,11 +9,14 @@ import twitterparams, logging
 import boto
 from boto.s3.key import Key
 import boto.ec2.cloudwatch
+from boto.dynamodb2.table import Table
 
 class TWaiter(StreamListener):
     # see Tweepy for more info
 
     s3Conn = None
+    dynamoTable = None
+    env = None
 
     def get_filename(self):
         folder = 'tweets/{0}'.format(time.strftime("%Y%m%d"))
@@ -27,18 +30,22 @@ class TWaiter(StreamListener):
         self.logger = logging.getLogger('RotatingLogger')
         self.api = api or API()
         self.counter = 0
-        self.number_of_tweeets = twitterparams.TOTAL_TWEETS
         self.interval = twitterparams.CW_INTERVAL
         self.counter_max_size = twitterparams.COUNTER_MAX_SIZE
         self.CW_NAMESPACE = twitterparams.CW_NAMESPACE
+        region = twitterparams.REGION
+        TWaiter.env = twitterparams.ENV
+        self.tweet_read_starttime = datetime.datetime.now()
         try:
             current_dir = os.path.dirname(os.path.realpath(__file__))
             os.chdir(current_dir)
             self.output  = open(self.get_filename(), 'w')
             TWaiter.s3Conn = boto.connect_s3()
+            TWaiter.dynamoTable = Table(twitterparams.CONFIG_TABLENAME)
+            item=TWaiter.dynamoTable.get_item(id=TWaiter.env+'#total_tweets')
+            self.number_of_tweeets = int(item.get('value'))
             self.bucket = TWaiter.s3Conn.get_bucket(twitterparams.BUCKET_NAME)
-            TWaiter.cwConn = boto.ec2.cloudwatch.connect_to_region('us-east-1')
-            self.tweet_read_starttime = datetime.datetime.now()
+            TWaiter.cwConn = boto.ec2.cloudwatch.connect_to_region(region)
             self.tweet_interval_start_count = self.number_of_tweeets
         except Exception, e:
             self.logger.error("Problem opening output file and connection to s3. Excpetion: {0}".format(e))
@@ -55,6 +62,17 @@ class TWaiter(StreamListener):
             self.tweet_interval_start_count = self.number_of_tweeets
         except Exception, e:
             self.logger.error("notify_cloudwatch. Exception {0}".format(e))
+
+
+    def update_dynamoTable(self):
+        try:
+            item = TWaiter.dynamoTable.get_item(id=TWaiter.env+'#total_tweets')
+            old_value = int(item['value'])
+            item['value']=int(self.number_of_tweeets)
+            item.save()
+            self.logger.info("update_dynamoTable - old value: {0}, new value: {1}".format(old_value, item['value']))
+        except Exception, e:
+            self.logger.error("update_dynamoTable - error: {0}".format(e))
 
     def file_to_s3(self):
         self.logger.info("file_to_s3")
@@ -98,6 +116,7 @@ class TWaiter(StreamListener):
         total_seconds = (datetime.datetime.now() - self.tweet_read_starttime).total_seconds()
         if (total_seconds > self.interval):
             self.notify_cloudwatch(total_seconds)
+            self.update_dynamoTable()
 
         if self.counter >= self.counter_max_size:
             self.file_to_s3()
