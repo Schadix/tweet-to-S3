@@ -12,13 +12,13 @@ Requirements:
 
 twitterparams.py
 ================
-OAuthConsKey = <Twitter Auth Key>
-OAuthConsSecret = <Twitter Secret Key>
-OAuthToken = <Twitter OAuthToken>
-OAuthTokenSecret = <Twitter OAuth Secret>
-CW_NAMESPACE='tweet-to-s3'
-CW_INTERVAL=<interval to send updates to CloudWatch>
-COUNTER_MAX_SIZE=<max size of tweets to gather before zipping and pushing to S3
-BUCKET_NAME=<S3 bucket name>
-REGION=<region used>
+OAuthConsKey = `<Twitter Auth Key>`<br>
+OAuthConsSecret = `<Twitter Secret Key>`<br>
+OAuthToken = `<Twitter OAuthToken>`<br>
+OAuthTokenSecret = `<Twitter OAuth Secret>`<br>
+CW_NAMESPACE= `<CloudWatch Namespace>`<br>
+CW_INTERVAL= `<interval to send updates to CloudWatch in s>`<br>
+COUNTER_MAX_SIZE= `<max size of tweets to gather before zipping and pushing to S3`<br>
+BUCKET_NAME= `<S3 bucket name>`<br>
+REGION= `<region used>`<br>
 
