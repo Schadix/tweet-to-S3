@@ -4,10 +4,8 @@
 # with modifications by http://github.com/marciw
 
 from twaiter import TWaiter
-import tweepy, sys, twitterparams
-import logging
-import logging.handlers
-import signal
+import tweepy, sys, twitterparams, signal
+import logging, logging.handlers
 
 # authentication params (supplied via cfn)
 consumer_key = twitterparams.OAuthConsKey
@@ -42,6 +40,7 @@ def main(term):
         logger.error("An error occurred. No tweets collected. {0}".format(e))
         stream.disconnect()
         waiter.close()
+        sys.exit(1)
 
 
 def close(signal, frame):

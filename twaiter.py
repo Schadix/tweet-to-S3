@@ -17,6 +17,8 @@ class TWaiter(StreamListener):
     s3Conn = None
     dynamoTable = None
     env = None
+    DEBUG = False
+    # KINESIS = 
 
     def get_filename(self):
         folder = 'tweets/{0}'.format(time.strftime("%Y%m%d"))
@@ -63,7 +65,6 @@ class TWaiter(StreamListener):
         except Exception, e:
             self.logger.error("notify_cloudwatch. Exception {0}".format(e))
 
-
     def update_dynamoTable(self):
         try:
             item = TWaiter.dynamoTable.get_item(id=TWaiter.env+'#total_tweets')
@@ -75,24 +76,27 @@ class TWaiter(StreamListener):
             self.logger.error("update_dynamoTable - error: {0}".format(e))
 
     def file_to_s3(self):
-        self.logger.info("file_to_s3")
         # TODO: should go into subprocess
         # 1. create new file (leave old file open for writes)
         # 2. switch to new file
-        try:
+        if TWaiter.DEBUG:
+            print "file_to_s3 - debug"
             self.counter = 0
-            old_temp_file = self.output
-            self.output.close()
-            self.output  = open(self.get_filename(), 'w')
-            subprocess.call(["zip", old_temp_file.name+'.zip', old_temp_file.name])
-            remove(old_temp_file.name)
-            k = Key(self.bucket)
-            k.key = old_temp_file.name+'.zip'
-            k.set_contents_from_filename(old_temp_file.name+'.zip')
-            self.logger.info('{0}.zip copied to S3 bucket'.format(old_temp_file.name))
-            remove(old_temp_file.name+'.zip')
-        except Exception, e:
-            self.logger.error("file_to_s3. Exception {0}".format(e))
+        else:
+            try:
+                self.counter = 0
+                old_temp_file = self.output
+                self.output.close()
+                self.output  = open(self.get_filename(), 'w')
+                subprocess.call(["bzip2", old_temp_file.name])
+                bz2File = old_temp_file.name+'.bz2'
+                k = Key(self.bucket)
+                k.key = bz2File
+                k.set_contents_from_filename(bz2File)
+                self.logger.info('{0} copied to S3 bucket'.format(bz2File))
+                remove(bz2File)
+            except Exception, e:
+                self.logger.error("file_to_s3. Exception {0}".format(e))
 
     def on_data(self, data):
         # The presence of 'in_reply_to_status' indicates a "normal" tweet.
@@ -114,6 +118,7 @@ class TWaiter(StreamListener):
         self.number_of_tweeets += 1
 
         total_seconds = (datetime.datetime.now() - self.tweet_read_starttime).total_seconds()
+
         if (total_seconds > self.interval):
             self.notify_cloudwatch(total_seconds)
             self.update_dynamoTable()
@@ -121,12 +126,11 @@ class TWaiter(StreamListener):
         if self.counter >= self.counter_max_size:
             self.file_to_s3()
 
-        # For tutorial purposes, only 500 tweets are collected.
-        # Increase this number to get bigger data!
-        # if self.counter >= 500:
-        #     self.output.close()
-        #     print "Finished collecting tweets."
-        #     sys.exit()
+        # When has geo data, send json to Kinesis
+        # data = json.loads(status)
+        # if data["geo"]:
+            
+
         return
 
     def on_delete(self, status_id, user_id):
