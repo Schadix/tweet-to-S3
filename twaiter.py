@@ -12,13 +12,11 @@ import boto.ec2.cloudwatch
 from boto.dynamodb2.table import Table
 
 class TWaiter(StreamListener):
-    # see Tweepy for more info
 
     s3Conn = None
     dynamoTable = None
     env = None
     DEBUG = False
-    # KINESIS = 
 
     def get_filename(self):
         folder = 'tweets/{0}'.format(time.strftime("%Y%m%d"))
@@ -110,9 +108,8 @@ class TWaiter(StreamListener):
 
 
     def on_status(self, status):
-        # Get only the text of the tweet and its ID.
+        # write to file
         self.output.write(status)
-        # print (status)
 
         self.counter += 1
         self.number_of_tweeets += 1
@@ -126,11 +123,6 @@ class TWaiter(StreamListener):
         if self.counter >= self.counter_max_size:
             self.file_to_s3()
 
-        # When has geo data, send json to Kinesis
-        # data = json.loads(status)
-        # if data["geo"]:
-            
-
         return
 
     def on_delete(self, status_id, user_id):
@@ -138,8 +130,11 @@ class TWaiter(StreamListener):
         return
 
     def on_error(self, status_code):
-        self.logger.error('Error: ' + str(status_code) + "\n")
-        return False
+        self.logger.error('on_error. Error: ' + str(status_code) + "\n")
+        # TODO: just call close, zdaemon will restart. Or throw an exception
+        # Better would be proper error handling and reconnecting actually
+        raise Exception('on_error. Error: ' + str(status_code) + "\n")
+        return 
     
     def close(self):
         self.logger.info("Twaiter - close")
