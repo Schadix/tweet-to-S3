@@ -2,7 +2,7 @@
 #
 # Author: schadix (copied sceleton from jonesy@cs.princeton.edu)
 #
-# chkconfig: 2345 13 100
+# chkconfig: 2345 13 99
 # description: tweet-to-S3
 # NEW VERSION FROM (http://www.linux.com/learn/tutorials/442412-managing-linux-daemons-with-init-scripts)
 

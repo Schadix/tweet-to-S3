@@ -24,12 +24,14 @@ api = tweepy.API(auth)
 LOG_FILENAME = "logs/output.log"
 logger = logging.getLogger('RotatingLogger')
 logger.setLevel(logging.INFO)
+# create formatter and add it to the handlers
 handler = logging.handlers.RotatingFileHandler(LOG_FILENAME, maxBytes=100000, backupCount=10)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(filename)s - %(levelname)s - %(lineno)d - %(message)s')
+handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 waiter = TWaiter(api, "tweets")
 stream = tweepy.Stream(auth, waiter)
-
 
 def main(term):
 
