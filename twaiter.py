@@ -9,25 +9,24 @@ import twitterparams, logging
 import boto
 from boto.s3.key import Key
 import boto.ec2.cloudwatch
-from boto.dynamodb2.table import Table
 
 class TWaiter(StreamListener):
 
     s3Conn = None
-    dynamoTable = None
     env = None
     DEBUG = False
 
-    def get_filename(self):
+    def get_filename(self, namevalue="sample"):
         folder = 'tweets/{0}'.format(time.strftime("%Y%m%d"))
         if not os.path.exists(folder):
             os.makedirs(folder)
-        filename = ('{0}/tweet.{1}.txt').format(folder, 
-            datetime.datetime.now().strftime("%Y%m%d-%H:%M:%S.%f"))
+        filename = ('{0}/{2}-tweet.{1}.txt').format(folder, 
+            datetime.datetime.now().strftime("%Y%m%d-%H:%M:%S.%f"), namevalue)
         return filename
 
-    def __init__(self, api = None, label = 'default_collection'):
+    def __init__(self, api = None, name = 'sample'):
         self.logger = logging.getLogger('RotatingLogger')
+        self.namevalue=name
         self.api = api or API()
         self.counter = 0
         self.interval = twitterparams.CW_INTERVAL
@@ -43,7 +42,7 @@ class TWaiter(StreamListener):
             os.chdir(current_dir)
             if not os.path.exists(twitterparams.TWEETS_COLLECTED_FOLDER):
                 os.makedirs(twitterparams.TWEETS_COLLECTED_FOLDER)
-            self.output  = open(self.get_filename(), 'w')
+            self.output  = open(self.get_filename(self.namevalue), 'w')
             TWaiter.cwConn = boto.ec2.cloudwatch.connect_to_region(region)
         except Exception, e:
             self.logger.error("Problem opening output file and connection to s3. Excpetion: {0}".format(e))
@@ -52,7 +51,7 @@ class TWaiter(StreamListener):
         count_per_second = (self.number_of_tweets - self.tweet_interval_start_count) / total_seconds
         try:
             self.logger.info("self.number_of_tweets: {0}, self.tweet_interval_start_count: {1}, total_seconds: {2}, count_per_second: {3}".format(self.number_of_tweets, self.tweet_interval_start_count, total_seconds, count_per_second))
-            self.cwConn.put_metric_data(namespace=self.CW_NAMESPACE,name="tweetsPerSecond",value=count_per_second
+            self.cwConn.put_metric_data(namespace=self.CW_NAMESPACE,name="tps-{0}".format(self.namevalue),value=count_per_second
                 , timestamp=datetime.datetime.now(), unit="Count/Second")
             self.tweet_read_starttime=datetime.datetime.now()
             self.tweet_interval_start_count = self.number_of_tweets

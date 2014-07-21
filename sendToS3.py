@@ -20,6 +20,8 @@ LOG_FILENAME = "logs/sendToS3_output.log"
 logger = logging.getLogger('RotatingLogger')
 logger.setLevel(logging.INFO)
 handler = logging.handlers.RotatingFileHandler(LOG_FILENAME, maxBytes=100000, backupCount=10)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(filename)s - %(levelname)s - %(lineno)d - %(message)s')
+handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 cw_interval_start=datetime.datetime.now()
@@ -37,7 +39,7 @@ def get_lines_in_file(filename):
 	return lines_in_file
 
 def compress_file(filename):
-	logger.info("compress_file")
+	logger.info("compress_file: {0}".format(filename))
 	proc=subprocess.Popen(["bzip2", filename], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)	
 	out, err = proc.communicate()
 	while (proc.returncode is None):
@@ -59,7 +61,7 @@ def send_to_S3(filename):
 	k.set_contents_from_filename(bzipFilename)
 	logger.info("send_to_S3 - done {0}".format(name))
 
-# not multithread safe
+# not thread safe
 def exceeds_interval():
 	global cw_interval_start
 	delta_seconds = (datetime.datetime.now() - cw_interval_start).seconds
@@ -70,13 +72,14 @@ def exceeds_interval():
 		return False
 
 def update_CloudWatchAndDynamo(lines_in_file):
-	logger.info("update_CloudWatchAndDynamo")
+	logger.info("update_CloudWatchAndDynamo. lines in file: {0}".format(lines_in_file))
 	item = dynamoTable.get_item(id=twitterparams.ENV+'#total_tweets')
 	new_value = int(item['value'])+lines_in_file
 	cwConn.put_metric_data(namespace=twitterparams.CW_NAMESPACE,name="tweetsTotal",value=new_value
 	, timestamp=datetime.datetime.now(), unit="Count")
 	item['value']=int(new_value)
 	item.save()
+	logger.info("update_CloudWatchAndDynamo. tweetsTotal: {0}".format(new_value))
 
 #=========
 
@@ -88,8 +91,8 @@ sum_tweets_collected=0
 
 while True:
 	file_list=glob.glob("{0}/*.txt".format(twitterparams.TWEETS_COLLECTED_FOLDER))
-	logger.info(file_list)
 	if (file_list):
+		logger.info("found files: {0}".format(file_list))
 		for f in file_list:
 			lines_in_file=get_lines_in_file(f)
 			logger.info("lines_in_file: {0}".format(lines_in_file))

@@ -1,0 +1,48 @@
+#!/bin/bash
+#
+# Author: schadix (copied sceleton from jonesy@cs.princeton.edu)
+#
+# chkconfig: 2345 13 99
+# description: tweet-zipper
+# NEW VERSION FROM (http://www.linux.com/learn/tutorials/442412-managing-linux-daemons-with-init-scripts)
+
+# Source function library.
+. /etc/init.d/functions
+
+# Activate the python virtual environment
+. /home/ec2-user/python27/bin/activate
+
+TWEET_TO_S3_HOME=/home/ec2-user/tweet-to-S3
+SERVICENAME=tweet-geo
+RUN_AS_USER=ec2-user
+ZDAEMON_CONF=zdaemon-geo.conf
+
+case "$1" in
+    start)
+        echo -n "Starting $SERVICENAME services: "
+        cd $TWEET_TO_S3_HOME
+        zdaemon --user $RUN_AS_USER -C $ZDAEMON_CONF start
+        touch /var/lock/subsys/$SERVICENAME
+    ;;
+    stop)
+        echo -n "Shutting down $SERVICENAME services: "
+        cd $TWEET_TO_S3_HOME
+        zdaemon --user $RUN_AS_USER -C $ZDAEMON_CONF stop
+        rm -f /var/lock/subsys/$SERVICENAME
+    ;;
+    status)
+        cd $TWEET_TO_S3_HOME
+        zdaemon --user $RUN_AS_USER -C $ZDAEMON_CONF status
+    ;;
+    restart)
+        cd $TWEET_TO_S3_HOME
+        $0 stop; $0 start
+    ;;
+    reload)
+        $0 stop; $0 start
+    ;;
+    *)
+        echo "Usage: $SERVICENAME {start|stop|status|reload|restart[|probe]"
+        exit 1
+    ;;
+esac

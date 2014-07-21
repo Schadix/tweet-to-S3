@@ -1,19 +1,22 @@
 #!/bin/bash
 
+APP_FOLDER="tweet-to-S3"
+
 if [ $# -ne 1 ]
 then
   echo "Usage: $0 <server>"
   exit
 fi
 
-ssh $1 <<'ENDSSH'
+ssh $1 ' 
 mkdir -p tweet-to-S3
-ENDSSH
+'
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-scp collector.py twaiter.py sendToS3.py init.d/tweet-zipper init.d/tweet-to-S3 conf/zdaemon.conf conf/zdaemon-zipper.conf $1:tweet-to-S3/
+scp collector.py twaiter.py sendToS3.py init.d/tweet-zipper init.d/tweet-to-S3 init.d/tweet-geo conf/zdaemon.conf conf/zdaemon-zipper.conf conf/zdaemon-geo.conf $1:$APP_FOLDER/
 
-ssh $1 <<'ENDSSH'
-sudo cp tweet-zipper /etc/init.d/
-sudo cp tweet-to-S3 /etc/init.d/
-ENDSSH
+ssh -t $1 "
+sudo cp $APP_FOLDER/tweet-zipper /etc/init.d/
+sudo cp $APP_FOLDER/tweet-to-S3 /etc/init.d/
+sudo cp $APP_FOLDER/tweet-geo /etc/init.d/
+"
