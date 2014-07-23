@@ -67,7 +67,7 @@ class TWaiter(StreamListener):
                 self.counter = 0
                 old_temp_file = self.output
                 self.output.close()
-                self.output  = open(self.get_filename(), 'w')
+                self.output  = open(self.get_filename(self.namevalue), 'w')
                 self.logger.info("old_temp_file.name: {0}".format(old_temp_file.name))
                 path, name = os.path.split(os.path.abspath(old_temp_file.name))
                 subprocess.call(["mv", old_temp_file.name, twitterparams.TWEETS_COLLECTED_FOLDER+"/"+name])
