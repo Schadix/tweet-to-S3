@@ -2,3 +2,4 @@ twitterparams.py
 *.pyc
 logs/
 tweets/
+mrjob/
