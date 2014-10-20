@@ -65,25 +65,27 @@ def main(term):
         if filtervalue==DEFAULT:
             logger.info("sample stream")
             stream.sample()
-        else:
+        elif (filtervalue.startswith("locations=")):
             logger.info("filter: {0}".format(filtervalue))
-            if (filtervalue.startswith("locations=")):
-                stream.filter(locations=[float(x) for x in filtervalue[11:-1].split(",")])
-            if (filtervalue.startswith("follow=")):
-                stream.filter(follow=filtervalue[8:-1].split(","))
-            if (filtervalue.startswith("track=")):
-                stream.filter(track=filtervalue[7:-1].split(","))
-    # except (KeyboardInterrupt, SystemExit):
-    #     stream.disconnect()
+            loc=[float(x) for x in filtervalue[11:-1].split(",")]
+            logger.info("loc: {0}".format(loc))
+            stream.filter(locations=loc)
+        elif (filtervalue.startswith("follow=")):
+            logger.info("filter: {0}".format(filtervalue))
+            stream.filter(follow=filtervalue[8:-1].split(","))
+        elif (filtervalue.startswith("track=")):
+            logger.info("filter: {0}".format(filtervalue))
+            stream.filter(track=filtervalue[7:-1].split(","))
+        else:
+            log.error("no match for filtervalue: {0}:".format(filtervalue))
+        stream.disconnect()
     except Exception, e:
         logger.error("An error occurred. No tweets collected. {0}".format(e))
-        stream.disconnect()
         waiter.close()
         sys.exit(1)
 
 
 def close(signal, frame):
-    stream.disconnect()
     waiter.close()
 
 if __name__ == '__main__':

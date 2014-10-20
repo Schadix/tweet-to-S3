@@ -57,9 +57,9 @@ def send_to_S3(filename):
 	path, name = os.path.split(os.path.abspath(f.name))
 	f.close()
 	k = Key(bucket)
-	k.key = datetime.datetime.now().strftime("%Y-%m-%d/")+name
+	k.key = twitterparams.TARGETFOLDER+"/"+datetime.datetime.now().strftime("%Y-%m-%d/")+name
 	k.set_contents_from_filename(bzipFilename)
-	logger.info("send_to_S3 - done {0}".format(name))
+	logger.info("send_to_S3 - done. source: {0}, target: {1}".format(name, k.key))
 
 # not thread safe
 def exceeds_interval():
